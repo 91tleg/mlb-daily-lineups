@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import statsapi
+import datetime
 
 
 def get_team_id_by_name(team_name):
@@ -122,12 +123,19 @@ def extract_pitchers(game_container, home_team_id, away_team_id):
     }
 
 
-def scrape_future_lineups():
-    URL = "https://www.rotowire.com/baseball/daily-lineups.php?date=tomorrow"
-    page = requests.get(URL)
+def get_game_id(date: str, home_team_id: int, away_team_id: int):
+    schedule = statsapi.schedule(date=date)
+    for game in schedule:
+        if game["away_id"] == away_team_id and game["home_id"] == home_team_id:
+            return game["game_id"]
+    return None
+
+
+def scrape_lineups(url: str, date: str):
+    page = requests.get(url)
     soup = BeautifulSoup(page.content, "html.parser")
 
-    all_games = []
+    all_games = [{"date": date}]
     game_containers = soup.select("div.lineup.is-mlb")
     for game_container in game_containers:
         boxscore_link = game_container.select_one("a[href*='/baseball/box-score/']")
@@ -138,6 +146,7 @@ def scrape_future_lineups():
         home_team, away_team = extract_teams_from_href(href)
         home_team_id = get_team_id_by_name(home_team)
         away_team_id = get_team_id_by_name(away_team)
+        game_id = get_game_id(date, home_team_id, away_team_id)
         
         pitchers = extract_pitchers(game_container, home_team_id, away_team_id)
         home_pitcher_name = pitchers["home_pitcher"]["name"]
@@ -149,6 +158,7 @@ def scrape_future_lineups():
         away_lineup = extract_lineup(game_container, "is-visit", away_team_id)
 
         lineup_info = {
+            "game_id": game_id,
             "home_team": {
                 "name": home_team,
                 "id": home_team_id,
@@ -165,5 +175,22 @@ def scrape_future_lineups():
             }
         }
         all_games.append(lineup_info)
-
     return all_games
+
+
+def get_date_str(tomorrow: bool) -> str:
+    offset = 1 if tomorrow else 0
+    date = datetime.date.today() + datetime.timedelta(days=offset)
+    return date.isoformat()
+
+
+def get_today_lineups():
+    date_str = get_date_str(tomorrow=False)
+    return scrape_lineups(
+        "https://www.rotowire.com/baseball/daily-lineups.php", date_str)
+
+
+def get_tomorrow_lineups():
+    date_str = get_date_str(tomorrow=True)
+    return scrape_lineups(
+        "https://www.rotowire.com/baseball/daily-lineups.php?date=tomorrow", date_str)
