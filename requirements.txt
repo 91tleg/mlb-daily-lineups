@@ -1,3 +1,13 @@
-beautifulsoup4
-requests
-MLB-StatsAPI
+beautifulsoup4==4.13.3
+certifi==2025.6.15
+charset-normalizer==3.4.2
+idna==3.10
+iniconfig==2.1.0
+MLB-StatsAPI==1.9.0
+packaging==25.0
+pluggy==1.6.0
+pytest==8.3.5
+requests==2.32.3
+soupsieve==2.7
+typing_extensions==4.14.0
+urllib3==2.5.0
